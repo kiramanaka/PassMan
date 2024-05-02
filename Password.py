@@ -48,7 +48,7 @@ class DataHandler:
         self.key = None
         self.passlist = []
 
-    def auth(self, passphrase) -> bool:
+    def authenticate(self, passphrase) -> bool:
         """
         Authenticates the passphrase and decrypts the vault file if it exists.
 
@@ -72,14 +72,16 @@ class DataHandler:
             salt=salt,
             iterations=480000,
         )
-        key = base64.urlsafe_b64encode(key_derivative.derive(passphrase))
+        key = base64.urlsafe_b64encode(key_derivative.derive(auth))
         print(key)
         self.key = Fernet(key)
         try:
             with open('vault.crypt', 'rb') as file:
                 content = self.key.decrypt(file.read()).decode("utf-8")
-                for line in content.split("µ"):
-                    data = line.split('§')
+                for line in content.split("⁘"):
+                    if not line:
+                        break
+                    data = line.split('⁖')
                     service = data[0]
                     username = data[1]
                     password = data[2]
@@ -121,14 +123,15 @@ class DataHandler:
         """
         Encrypts and saves the login data to the vault file.
         """
+        print("save called")
         content = ""
         for entry in self.passlist:
-            line = f"{entry.service}µ{entry.username}µ{entry.password}µ{entry.uri}§"
-            content = content.append(line)
-            raw = bytes(content)
-            encrypted = self.key.encrypt(raw)
-            with open('vault.crypt', 'wb') as file:
-                file.write(encrypted)
+            line = f"{entry.service}⁖{entry.username}⁖{entry.password}⁖{entry.uri}⁘"
+            content = content + line
+        raw = bytes(content, "UTF-8")
+        encrypted = self.key.encrypt(raw)
+        with open('vault.crypt', 'wb') as file:
+            file.write(encrypted)
 
     def get_all(self) -> []:
         """
@@ -173,6 +176,15 @@ class DataHandler:
                 uri for the login
         """
         login = LoginData(service, username, password, uri)
-        self.passlist = self.passlist.append(login)
-        buffer_list = sorted(self.passlist, key=lambda entry : entry.service)
-        self.passlist = buffer_list
+        self.passlist.append(login)
+        self.passlist.sort(key=lambda entry: entry.service)
+
+
+run = DataHandler()
+run.authenticate("test")
+"""
+run.create_new("testservice", "testuser", "testpassword", "https://www.test.com")
+run.create_new("exampleservice", "exampleuser", "examplepassword", "https://www.example.com")
+run.save()
+"""
+print("done")
