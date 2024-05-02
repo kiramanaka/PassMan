@@ -6,7 +6,21 @@ from Authutils import Auth
 
 
 class LoginData:
-    def __init__(self, service, username, password, uri):
+    def __init__(self, service: str, username: str, password: str, uri: str) -> None:
+        """
+        Constructs all the necessary attributes for the login data object.
+
+        Parameters
+        ----------
+            service : str
+                service for the login
+            username : str
+                username for the login
+            password : str
+                password for the login
+            uri : str
+                uri for the login
+        """
         self.username = username
         self.password = password
         self.service = service
@@ -14,12 +28,40 @@ class LoginData:
 
 
 class DataHandler:
+    """
+    A class to handle data.
+
+    Attributes
+    ----------
+    auth : Auth
+        an Auth object to handle authentication
+    key : str
+        key for encryption and decryption
+    passlist : list
+        list to store login data
+    """
     def __init__(self) -> None:
+        """
+        Constructs all the necessary attributes for the data handler object.
+        """
         self.auth = Auth()
         self.key = None
         self.passlist = []
 
-    def auth(self, passphrase: str) -> bool:
+    def auth(self, passphrase) -> bool:
+        """
+        Authenticates the passphrase and decrypts the vault file if it exists.
+
+        Parameters
+        ----------
+            passphrase : str
+                passphrase for authentication
+
+        Returns
+        -------
+            bool
+                True if authentication is successful, False otherwise
+        """
         auth = self.auth.auth(passphrase)
         if not auth:
             return False
@@ -35,9 +77,7 @@ class DataHandler:
         self.key = Fernet(key)
         try:
             with open('vault.crypt', 'rb') as file:
-                raw = file.read()
-                content = self.key.decrypt(raw)
-                content = content.decode("utf-8")
+                content = self.key.decrypt(file.read()).decode("utf-8")
                 for line in content.split("µ"):
                     data = line.split('§')
                     service = data[0]
@@ -50,3 +90,89 @@ class DataHandler:
         except FileNotFoundError:
             print('No Vault found, a new one will be created when you create a new entry.')
         return True
+
+    def search(self, search_term: str, search_by_uri: bool) -> []:
+        """
+        Searches for the login data by service or uri.
+
+        Parameters
+        ----------
+            search_term : str
+                term to search by
+            search_by_uri : bool
+                if True, search by uri, else search by service
+
+        Returns
+        -------
+            list of login data that matches the search term
+        """
+        results = []
+        if search_by_uri:
+            for entry in self.passlist:
+                if search_term == entry.uri:
+                    results.append(entry)
+        else:
+            for entry in self.passlist:
+                if search_term == entry.service:
+                    results.append(entry)
+        return results
+
+    def save(self) -> None:
+        """
+        Encrypts and saves the login data to the vault file.
+        """
+        content = ""
+        for entry in self.passlist:
+            line = f"{entry.service}µ{entry.username}µ{entry.password}µ{entry.uri}§"
+            content = content.append(line)
+            raw = bytes(content)
+            encrypted = self.key.encrypt(raw)
+            with open('vault.crypt', 'wb') as file:
+                file.write(encrypted)
+
+    def get_all(self) -> []:
+        """
+        Returns all the login data.
+
+        Returns
+        -------
+            list
+                list of all login data
+        """
+        return self.passlist
+
+    def drop_entry(self, delete: object) -> None:
+        """
+        Deletes a login data entry.
+
+        Parameters
+        ----------
+            delete : object
+                login data object to delete
+        """
+        index = 0
+        for entry in self.passlist:
+            if delete == entry:
+                self.passlist.pop(index)
+                break
+            index += 1
+
+    def create_new(self, service: str, username: str, password: str, uri: str) -> None:
+        """
+        Creates a new login data and adds it to the list, which is sorted by service.
+
+        Parameters
+        ----------
+            service : str
+                service for the login
+            username : str
+                username for the login
+            password : str
+                password for the login
+            uri : str
+                uri for the login
+        """
+        login = LoginData(service, username, password, uri)
+        self.passlist = self.passlist.append(login)
+        buffer_list = sorted(self.passlist, key=lambda entry : entry.service)
+        self.passlist = buffer_list

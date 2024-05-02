@@ -48,8 +48,7 @@ class Auth:
         """
         sha384 = hashes.Hash(hashes.SHA3_384())
         sha384.update(bytes(passphrase, 'UTF-8'))
-        pre_hash = sha384.finalize()
-        pre_hash = pre_hash + self.control_hash
+        pre_hash = sha384.finalize() + self.control_hash
         sha512 = hashes.Hash(hashes.SHA3_512())
         sha512.update(pre_hash)
         return sha512.finalize()
