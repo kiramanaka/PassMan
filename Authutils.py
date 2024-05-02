@@ -35,7 +35,7 @@ class Auth:
         else:
             return self.build_decrypt_key(passphrase)
 
-    def build_decrypt_key(self, passphrase: str) -> str:
+    def build_decrypt_key(self, passphrase: str) -> bytes:
         """
         The function to build a decryption key. It hashes the passphrase using SHA3_384,
         appends the control_hash to the result, and then hashes the result using SHA3_512.
